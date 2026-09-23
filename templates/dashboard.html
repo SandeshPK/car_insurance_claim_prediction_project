@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analytics Dashboard — Car Insurance</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #f0f4f8;
+      color: #1f2328;
+    }
+
+    nav {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    nav .brand { font-size: 1.15rem; font-weight: 700; }
+    nav .nav-links a {
+      color: #c9d8ea;
+      text-decoration: none;
+      margin-left: 1.5rem;
+      font-size: .9rem;
+    }
+    nav .nav-links a:hover, nav .nav-links a.active { color: #fff; }
+
+    .hero {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+      color: #fff;
+      text-align: center;
+      padding: 2.5rem 1rem 2rem;
+    }
+    .hero h1 { font-size: 1.8rem; font-weight: 800; }
+    .hero p  { opacity: .8; margin-top: .4rem; font-size: .95rem; }
+
+    .container {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1rem 3rem;
+    }
+
+    /* ── KPI Cards ── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .kpi {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.2rem 1.4rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+      border-left: 4px solid #2d6a9f;
+    }
+    .kpi.green  { border-left-color: #22c55e; }
+    .kpi.red    { border-left-color: #ef4444; }
+    .kpi.purple { border-left-color: #7c5cd8; }
+    .kpi.amber  { border-left-color: #f59e0b; }
+
+    .kpi .kpi-val {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #1e3a5f;
+      line-height: 1.1;
+    }
+    .kpi .kpi-lbl {
+      font-size: .78rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-top: .3rem;
+    }
+    .kpi .kpi-sub {
+      font-size: .82rem;
+      color: #374151;
+      margin-top: .15rem;
+    }
+
+    /* ── Charts grid ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+      gap: 1.4rem;
+    }
+    .chart-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.4rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+    }
+    .chart-card h3 {
+      font-size: .92rem;
+      color: #1e3a5f;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .chart-card canvas { max-height: 280px; }
+
+    /* ── Model card ── */
+    .model-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.4rem 1.8rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,.07);
+      margin-bottom: 2rem;
+    }
+    .model-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .model-metrics {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .metric-pill {
+      background: #f0f4f8;
+      border-radius: 8px;
+      padding: .7rem 1.4rem;
+      text-align: center;
+      min-width: 130px;
+    }
+    .metric-pill .mp-val { font-size: 1.6rem; font-weight: 800; color: #1e3a5f; }
+    .metric-pill .mp-lbl { font-size: .75rem; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; }
+
+    .eval-img {
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 1rem;
+      border: 1px solid #e5e7eb;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: .78rem;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">🚗 Insurance Claim Predictor</span>
+  <div class="nav-links">
+    <a href="/">Predict</a>
+    <a href="/dashboard" class="active">Dashboard</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>📊 Analytics Dashboard</h1>
+  <p>Dataset insights &amp; model performance overview</p>
+</div>
+
+<div class="container">
+
+  <!-- Model info -->
+  <div class="model-card">
+    <h3>🤖 Model Performance — {{ stats.model_name }}</h3>
+    <div class="model-metrics">
+      <div class="metric-pill">
+        <div class="mp-val">{{ stats.accuracy }}%</div>
+        <div class="mp-lbl">Accuracy</div>
+      </div>
+      <div class="metric-pill">
+        <div class="mp-val">{{ stats.auc }}</div>
+        <div class="mp-lbl">ROC-AUC</div>
+      </div>
+      <div class="metric-pill">
+        <div class="mp-val">{{ stats.total }}</div>
+        <div class="mp-lbl">Training Records</div>
+      </div>
+      <div class="metric-pill">
+        <div class="mp-val">18</div>
+        <div class="mp-lbl">Features Used</div>
+      </div>
+    </div>
+    <img src="/static/model_evaluation.png" alt="Model Evaluation Plot" class="eval-img"
+         onerror="this.style.display='none'"/>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-row">
+    <div class="kpi green">
+      <div class="kpi-val">{{ stats.total }}</div>
+      <div class="kpi-lbl">Total Records</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-val">{{ stats.claim_count }}</div>
+      <div class="kpi-lbl">Claims Filed</div>
+      <div class="kpi-sub">{{ stats.claim_pct }}% of total</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-val">{{ stats.no_claim_count }}</div>
+      <div class="kpi-lbl">No Claims</div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-val">{{ stats.accuracy }}%</div>
+      <div class="kpi-lbl">Model Accuracy</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-val">{{ stats.auc }}</div>
+      <div class="kpi-lbl">AUC Score</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+
+    <div class="chart-card">
+      <h3>Claims vs No Claims</h3>
+      <canvas id="chart-outcome"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Claim Rate by Age Group</h3>
+      <canvas id="chart-age"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Claim Rate by Driving Experience</h3>
+      <canvas id="chart-exp"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Income Distribution</h3>
+      <canvas id="chart-income"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Vehicle Type Distribution</h3>
+      <canvas id="chart-vehicle"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Age Group Distribution</h3>
+      <canvas id="chart-age-dist"></canvas>
+    </div>
+
+  </div>
+</div>
+
+<footer>Car Insurance Claim Predictor &mdash; IBM AICTE AI/ML Project</footer>
+
+<script>
+  const stats = {{ stats | tojson }};
+
+  const PALETTE = ["#1e3a5f","#2d6a9f","#22c55e","#ef4444","#f59e0b","#7c5cd8","#06b6d4","#ec4899"];
+
+  function makeChart(id, type, labels, datasets, opts={}) {
+    new Chart(document.getElementById(id), {
+      type,
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: "bottom" } },
+        ...opts
+      }
+    });
+  }
+
+  // 1. Outcome pie
+  makeChart("chart-outcome", "doughnut",
+    ["No Claim", "Claim"],
+    [{ data: [stats.no_claim_count, stats.claim_count],
+       backgroundColor: ["#22c55e", "#ef4444"],
+       borderWidth: 2 }]
+  );
+
+  // 2. Claim rate by age
+  const ageKeys = Object.keys(stats.claim_by_age);
+  const ageVals = ageKeys.map(k => stats.claim_by_age[k]);
+  makeChart("chart-age", "bar", ageKeys, [{
+    label: "Claim Rate (%)",
+    data: ageVals,
+    backgroundColor: "#2d6a9f"
+  }], { scales: { y: { beginAtZero: true, max: 100 } } });
+
+  // 3. Claim rate by driving experience
+  const expKeys = Object.keys(stats.claim_by_exp);
+  const expVals = expKeys.map(k => stats.claim_by_exp[k]);
+  makeChart("chart-exp", "bar", expKeys, [{
+    label: "Claim Rate (%)",
+    data: expVals,
+    backgroundColor: "#7c5cd8"
+  }], { scales: { y: { beginAtZero: true, max: 100 } } });
+
+  // 4. Income distribution
+  const incKeys = Object.keys(stats.income_dist);
+  const incVals = incKeys.map(k => stats.income_dist[k]);
+  makeChart("chart-income", "bar", incKeys, [{
+    label: "Count",
+    data: incVals,
+    backgroundColor: PALETTE
+  }], { scales: { y: { beginAtZero: true } } });
+
+  // 5. Vehicle type
+  const vtKeys = Object.keys(stats.vehicle_type_dist);
+  const vtVals = vtKeys.map(k => stats.vehicle_type_dist[k]);
+  makeChart("chart-vehicle", "pie", vtKeys, [{
+    data: vtVals,
+    backgroundColor: ["#1e3a5f","#f59e0b"]
+  }]);
+
+  // 6. Age group distribution
+  const adKeys = Object.keys(stats.age_dist);
+  const adVals = adKeys.map(k => stats.age_dist[k]);
+  makeChart("chart-age-dist", "bar", adKeys, [{
+    label: "Count",
+    data: adVals,
+    backgroundColor: "#06b6d4"
+  }], { scales: { y: { beginAtZero: true } } });
+</script>
+</body>
+</html>
